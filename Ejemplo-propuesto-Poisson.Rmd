@@ -17,7 +17,7 @@ En el fichero Datos-Encuesta-USA.RData aparecen datos del General Social Survey 
 Lee los datos con ayuda de R. 
 
 
-```{r}
+```{r load-data}
 load("DatosEncuestaUSA.RData")
 ```
 
@@ -25,12 +25,12 @@ El objetivo es analizar el número de hijos que tienen las mujeres que tenían u
 
 Con el siguiente código R puedes seleccionar la variable de interés, hijos, de mujeres con 40 años y que particiaron en los años 90 en la encuesta (la encuesta no incluye años más allá de 1999).
 
-```{r}
+```{r select-data}
 hijos<-Y$CHILDS[Y$FEMALE==1 & Y$YEAR>=1990 & Y$AGE==40 & !is.na(Y$DEG)]
 hijos<-hijos[!is.na(hijos)]
 ```
 
-En el objeto hijos aparecen el número de hijos que tienen las mujeres selccionadas. En concreto se trata de una muestra de tamaño $n= 155$.
+En el objeto hijos aparecen el número de hijos que tienen las mujeres seleccionadas. En concreto se trata de una muestra de tamaño $n = 155$.
 
 Es muy usual en la práctica de la estadística usar el modelo *Poisson* para representar una variable aleatoria que es un conteo, veremos más adelante cómo usar técnicas gráficas y procedimientos para analizar suposiciones como ésta (asumir un determinado modelo paramétrico para uos datos). Por el momento, supongamos que 
 $$N_i = \mbox{ Número de hijos que tiene cada mujer de esta población}$$
@@ -39,8 +39,7 @@ esta variable es aleatoria, y representamos su aleatoriedad mediante una $Po(\la
 
 Es decir la masa de probabilidad, suponiendo $\lambda$ conocido es:
 
-$P(X = x) = \frac{e^{-\lambda} \lambda^{x}}{x!}$, 
-$x = 0,1,2,...,\infty$
+$$P(X = x) = \frac{e^{-\lambda} \lambda^{x}}{x!}\ ; x = 0, 1, 2,..., \infty$$
 
 El objetivo de este ejercicio es estimar puntualmente $\lambda$.
 
@@ -62,6 +61,40 @@ Para buscar el máximo usando R tienes que programar primero la función verosim
 
 Tienes que especificar que optimize calcule un máximo, y que busque en un intervalo (por ejemplo prueba con el intervalo 0, 10), además hay que pasarle el resto de argumentos de la función *vero.pois*.
 
+###Desarrollo del ejercicio
+$$ L(\lambda | x_i) =  \prod_{i = 1}^{155} \frac{e^{-\lambda} · \lambda^{x_i}}{x_i!} = \frac{e^{-n·\lambda}·\lambda^{\sum x_i}}{\prod x_i!} $$
+```{r mle-poiss-a}
+vero.poiss <- function(lambda) {
+  n <- length(hijos)
+  return((exp(-n*lambda)*lambda^(sum(hijos))) / (prod(factorial(hijos))))
+}
+
+interval <- 0:10
+
+optimize(f = vero.poiss, 
+         interval = interval, 
+         lower = min(interval), 
+         upper = max(interval), 
+         maximum = TRUE
+         )
+```
+
+$\hat{\lambda} = 1.825806$
+
+Vamos a estimar $\lambda$ de otra manera: 
+
+$$ \hat{\lambda}(x) = max(L(\lambda | x_1, x_2, ..., x_{155}))\ ;\ \ \ \hat{\lambda}(x) = \frac{\delta}{\delta \lambda} L(\lambda | x_1, x_2, ..., x_{155}) = 0$$
+$$ln f(x_1, \ldots, x_{155} | \lambda) = -n · \lambda + (ln\lambda) \sum x_i - ln(\prod x_i!)$$
+
+$$\frac{d(ln f)}{\lambda} = -n + \frac{\sum x_i}{\lambda} = 0$$
+$$\hat{\lambda} = \frac{\sum x_i}{n} = \bar{x}$$
+Comprobamos:
+```{r mle-poiss-b}
+mean(hijos)
+```
+
+De nuevo, $\hat{\lambda} = 1.825806$
+
 ##Estimador Bayesiano
 
 Para el modelo Poisson existe una distribución a priori conjugada, la densidad Gamma sobre $\lambda$, de parámetros $a$ y $b$.
@@ -72,3 +105,4 @@ Supón que usamos una distribución inicial sobre $\lambda$ $\sim$ $Ga(2,1)$. Ca
 
 Proporciona un estimador puntual para $\lambda$ usando esta distribución a posteriori.
 
+$$\frac{e^{-n·\lambda}·\lambda^{\sum x_i}}{\prod x_i!}$$
