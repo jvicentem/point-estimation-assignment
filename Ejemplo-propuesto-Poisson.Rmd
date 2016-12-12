@@ -107,7 +107,7 @@ Proporciona un estimador puntual para $\lambda$ usando esta distribución a post
 
 ###Desarrollo del ejercicio
 
-Histograma de la función a priori:
+Histograma y función de densidad de la función a priori:
 
 ```{r bayes-a, warning=FALSE}
 library(ggplot2)
@@ -132,30 +132,6 @@ Una vez tenemos la función de distribución a priori para $\lambda$, debemos es
 $$ L(x_1, x_2, ..., x_155|\lambda) = f(x_1|\lambda)·f(x_2|\lambda)·...·f(x_{155}|\lambda)  $$
 $$ f(\lambda|x) = \frac{L(x|\lambda)·f(\lambda)}{\int{L(x|\lambda)·f(\lambda)·d\lambda}} $$
 
-```{r bayes-b}
-library(MCMCpack)
-
-poisson_gamma_values <- data.frame(MCpoissongamma(gamma_values$values, alpha = 1, beta = 2, mc = 100))
-colnames(poisson_gamma_values) <- c('values')
-
-poisson_gamma_values %>%
-  ggplot(aes(x=values)) +
-  geom_histogram(aes(fill=..count..), binwidth = 0.01, col='black')
-
-poisson_gamma_values %>%
-  ggplot(aes(x=values)) +
-  geom_density(alpha=.2, fill="#FF6666")
-
-summary(poisson_gamma_values)
-```
-
-Un estimador puntual de $\lambda$ podría ser la media, que en este caso es:
-```{r bayes-c} 
-mean(poisson_gamma_values$values)
-```
-
-Antes hemos utilizado la librería MCMCpack que trabaja con métodos Markov chain Monte Carlo. Ahora vamos a realizar una estimación puntual de $\lambda$ sin ayuda de ninguna librería que calcule cómo sería la función a posteriori.
-
 $$ P(\lambda|a,b) = \frac{b^a}{\gamma(a)} \lambda^{(a-1)}·e^{-b\lambda}  $$
 
 Donde $\gamma(a)$ es $(a-1)!$ para enteros y $\int_0^\infty x^{a-1}·e^{-x}dx$ en caso contrario.  
@@ -172,28 +148,29 @@ Si desarrollamos la expresión $\lambda^{\sum{x_i+a-1}} e^{-\lambda · (n+b)}$ v
 
 $$ posteriori = Gamma(a^*,\ b^*) = Gamma(\sum x_i + a,\ n + b) $$
 
-```{r bayes-d}
+```{r bayes-b}
 lambda_seq = seq(0, 10, length=10000)
 
 prior_gamma_values <- data.frame(dgamma(lambda_seq, 2, 1))
 colnames(prior_gamma_values) <- c('values')
 
-post_gamma_values %>%
-  ggplot(aes(x=lambda_seq, y=prior_gamma_values$values)) +
-  geom_line()+
-  ylim(0, 0.4)
-
 post_gamma_values <- data.frame(dgamma(lambda_seq, (sum(hijos) + 2), (length(hijos) + 1)))
 colnames(post_gamma_values) <- c('values')
 
-post_gamma_values %>%
-  ggplot(aes(x=lambda_seq, y=post_gamma_values$values)) +
-  geom_line() +
-  ylim(0, 4)
+
+ggplot() +
+geom_line(data = prior_gamma_values, aes(x=lambda_seq, y=values)) +
+geom_line(data = post_gamma_values, aes(x=lambda_seq, y=values, color='red')) +
+ylim(0, 4) +
+ylab('Densidad') +
+xlab('Lambda') +
+ggtitle('priori (negro) vs posteriori (rojo)')
 
 gamma_post <- function(lambda) {
   return(dgamma(lambda, (sum(hijos) + 2), (length(hijos) + 1)))
 }
+
+summary(post_gamma_values)
 
 optimize(f = gamma_post, 
          interval = 0:10, 
@@ -201,5 +178,11 @@ optimize(f = gamma_post,
          upper = 10, 
          maximum = TRUE
          )
+
 ```
+
+El valor de $\lambda$ con el que más densidad se consigue (la moda de la función a posteriori) es 1.820513.
+
+##Observaciones y conclusiones
+Realizando el cálculo del parámetro $\lambda$ de estas dos maneras se consigue el mismo resultado.
 
