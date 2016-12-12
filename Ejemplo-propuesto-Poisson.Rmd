@@ -99,10 +99,90 @@ De nuevo, $\hat{\lambda} = 1.825806$
 
 Para el modelo Poisson existe una distribución a priori conjugada, la densidad Gamma sobre $\lambda$, de parámetros $a$ y $b$.
 
-$f(\lambda) =\frac{b^a}{\Gamma(a)} \lambda^{a-1} exp  \left( -b \lambda\right)$, $0 < \lambda < \infty$
+$$f(\lambda) =\frac{b^a}{\Gamma(a)} \lambda^{a-1} exp  \left( -b \lambda\right), 0 < \lambda < \infty$$
 
-Supón que usamos una distribución inicial sobre $\lambda$ $\sim$ $Ga(2,1)$. Calcula la distribución a posteriori. Dibuja con ayuda de R ambas funciones (código muy parecido al que usamos para el modelo Beta-Binomial), pero ahora hay que usar la distribución adecuada como distribución a posteriori, con los parámetros que tocan.
+Supón que usamos una distribución inicial sobre $\lambda \sim Ga(2,1)$. Calcula la distribución a posteriori. Dibuja con ayuda de R ambas funciones (código muy parecido al que usamos para el modelo Beta-Binomial), pero ahora hay que usar la distribución adecuada como distribución a posteriori, con los parámetros que tocan.
 
 Proporciona un estimador puntual para $\lambda$ usando esta distribución a posteriori.
 
-$$\frac{e^{-n·\lambda}·\lambda^{\sum x_i}}{\prod x_i!}$$
+###Desarrollo del ejercicio
+
+Histograma y función de densidad de la función a priori:
+
+```{r bayes-a, warning=FALSE}
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+
+# shape = a , rate = b
+gamma_values <- data.frame(rgamma(155, shape = 2, rate = 1))
+colnames(gamma_values) <- c('values')
+
+gamma_values %>%
+  ggplot(aes(x=values)) +
+  geom_histogram(aes(fill=..count..), binwidth = 1, col='black')
+
+gamma_values %>%
+  ggplot(aes(x=values)) +
+  geom_density(alpha=.2, fill="#FF6666")
+```
+
+Una vez tenemos la función de distribución a priori para $\lambda$, debemos escribir la función de verosimilitud y luego emplear el teorema de Bayes:
+
+$$ L(x_1, x_2, ..., x_155|\lambda) = f(x_1|\lambda)·f(x_2|\lambda)·...·f(x_{155}|\lambda)  $$
+$$ f(\lambda|x) = \frac{L(x|\lambda)·f(\lambda)}{\int{L(x|\lambda)·f(\lambda)·d\lambda}} $$
+
+$$ P(\lambda|a,b) = \frac{b^a}{\gamma(a)} \lambda^{(a-1)}·e^{-b\lambda}  $$
+
+Donde $\gamma(a)$ es $(a-1)!$ para enteros y $\int_0^\infty x^{a-1}·e^{-x}dx$ en caso contrario.  
+
+$$ posterior \propto primaria · verosimilitud$$
+
+$$ posterior \propto (e^{-n·\lambda}·\lambda^{\sum x_i}) · (\frac{b^a}{\gamma(a)} \lambda^{(a-1)}·e^{-b\lambda}) $$
+
+$$ posterior \propto \lambda^{\sum{x_i+a-1}} e^{-\lambda · (n+b)} $$
+
+Nota: $e^{-n·\lambda}·\lambda^{\sum x_i}$ es el numerador de la función de verosimilitud de la función de distribución de Poisson (ver el desarrollo del ejercicio del apartado de MLE). No tenemos en cuenta el denominador porque con tener en cuenta los términos en los que aparece $\lambda$ es suficiente.
+
+Si desarrollamos la expresión $\lambda^{\sum{x_i+a-1}} e^{-\lambda · (n+b)}$ veremos que se parece mucho a una distribución Gamma con parámetros $a^* = \sum x_i + a$ y $b^* = n + b$. Por lo tanto Gamma (que es la distribución que elegimos a priori) es una distribución conjugada.
+
+$$ posteriori = Gamma(a^*,\ b^*) = Gamma(\sum x_i + a,\ n + b) $$
+
+```{r bayes-b}
+lambda_seq = seq(0, 10, length=10000)
+
+prior_gamma_values <- data.frame(dgamma(lambda_seq, 2, 1))
+colnames(prior_gamma_values) <- c('values')
+
+post_gamma_values <- data.frame(dgamma(lambda_seq, (sum(hijos) + 2), (length(hijos) + 1)))
+colnames(post_gamma_values) <- c('values')
+
+
+ggplot() +
+geom_line(data = prior_gamma_values, aes(x=lambda_seq, y=values)) +
+geom_line(data = post_gamma_values, aes(x=lambda_seq, y=values, color='red')) +
+ylim(0, 4) +
+ylab('Densidad') +
+xlab('Lambda') +
+ggtitle('priori (negro) vs posteriori (rojo)')
+
+gamma_post <- function(lambda) {
+  return(dgamma(lambda, (sum(hijos) + 2), (length(hijos) + 1)))
+}
+
+summary(post_gamma_values)
+
+optimize(f = gamma_post, 
+         interval = 0:10, 
+         lower = 0, 
+         upper = 10, 
+         maximum = TRUE
+         )
+
+```
+
+El valor de $\lambda$ con el que más densidad se consigue (la moda de la función a posteriori) es 1.820513.
+
+##Observaciones y conclusiones
+Realizando el cálculo del parámetro $\lambda$ de estas dos maneras se consigue el mismo resultado.
+
