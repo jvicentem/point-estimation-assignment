@@ -1,2 +1,2 @@
 # point-estimation-assignment
-Exe
+Exercises using RMarkdown and other R-packages
