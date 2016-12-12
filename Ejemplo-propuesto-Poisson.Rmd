@@ -183,6 +183,24 @@ optimize(f = gamma_post,
 
 El valor de $\lambda$ con el que más densidad se consigue (la moda de la función a posteriori) es 1.820513.
 
+Ahora vamos a intentar calcular el error del estimador. Para ello nos vamos a basar en el método EXACT (http://onbiostatistics.blogspot.com.es/2014/03/computing-confidence-interval-for.html) que es mejor cuando las muestras son pequeñas.
+
+
+```{r estimation-error}
+number_of_events <- 1.820513 * length(hijos)
+
+lb_exact_method <- qchisq((1-0.95)/2, 2*number_of_events)/2 
+ub_exact_method <- qchisq(1-(1-0.95)/2, 2*(number_of_events+1))/2
+
+upper_bound <- ub_exact_method / length(hijos)
+lower_bound <- lb_exact_method / length(hijos)
+
+lower_bound
+upper_bound
+```
+
+Con un nivel de confianza del 95%, el intervalo de confianza para el $\lambda$ estimado es $[1.614276, 2.045796]$.
+
 ##Observaciones y conclusiones
 Realizando el cálculo del parámetro $\lambda$ de estas dos maneras se consigue el mismo resultado.
 
